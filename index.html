@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ethara — Seat & Project Mapping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root{
+    --ink:#0F1B2E;
+    --paper:#F6F4EE;
+    --blueprint:#1E3A5F;
+    --blueprint-line: rgba(30,58,95,0.14);
+    --amber:#D98E2B;
+    --green:#3E8F5C;
+    --rose:#B5533C;
+    --slate:#5B6B7C;
+  }
+  body{
+    background: var(--paper);
+    color: var(--ink);
+    font-family:'Inter',sans-serif;
+    background-image:
+      linear-gradient(var(--blueprint-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--blueprint-line) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+  .font-display{ font-family:'Space Grotesk', sans-serif; }
+  .font-mono{ font-family:'IBM Plex Mono', monospace; }
+  .card{
+    background: #FFFFFF;
+    border: 1px solid var(--blueprint-line);
+    border-radius: 4px;
+  }
+  .blueprint-panel{
+    background: var(--ink);
+    color: var(--paper);
+    background-image:
+      linear-gradient(rgba(246,244,238,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(246,244,238,0.06) 1px, transparent 1px);
+    background-size: 22px 22px;
+    border-radius: 4px;
+  }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 3px;
+    display:inline-block;
+  }
+  .tag-available{ background: rgba(62,143,92,0.12); color: var(--green); }
+  .tag-occupied{ background: rgba(217,142,43,0.14); color: var(--amber); }
+  .tag-reserved{ background: rgba(181,83,60,0.12); color: var(--rose); }
+  .tag-maintenance{ background: rgba(91,107,124,0.14); color: var(--slate); }
+  .nav-btn{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 8px 14px;
+    border-radius: 4px;
+    color: var(--slate);
+    cursor:pointer;
+    transition: all 0.15s ease;
+  }
+  .nav-btn:hover{ background: var(--blueprint-line); }
+  .nav-btn.active{ background: var(--ink); color: var(--paper); }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background: var(--blueprint-line); border-radius: 4px; }
+  .chat-bubble-user{ background: var(--ink); color: var(--paper); }
+  .chat-bubble-ai{ background: #FFFFFF; border: 1px solid var(--blueprint-line); }
+  table{ border-collapse: collapse; width: 100%; }
+  th{ font-family:'IBM Plex Mono', monospace; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; color: var(--slate); text-align:left; padding:10px 12px; border-bottom: 1px solid var(--blueprint-line); }
+  td{ padding: 10px 12px; border-bottom: 1px solid var(--blueprint-line); font-size: 14px; }
+  tr:hover td{ background: rgba(30,58,95,0.03); }
+  .stat-card{ transition: transform 0.15s ease; }
+  .stat-card:hover{ transform: translateY(-2px); }
+  input, select{
+    font-family:'Inter',sans-serif;
+    border: 1px solid var(--blueprint-line);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: white;
+  }
+  input:focus, select:focus{ outline: 2px solid var(--ink); outline-offset: -1px; }
+  .loader{
+    border: 2px solid var(--blueprint-line);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    width: 20px; height:20px;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div class="max-w-7xl mx-auto px-6 py-6">
+
+  <!-- Header -->
+  <header class="flex items-center justify-between mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 bg-[var(--ink)] rounded flex items-center justify-center">
+        <span class="font-mono text-[var(--paper)] font-semibold text-sm">E</span>
+      </div>
+      <div>
+        <h1 class="font-display text-xl font-bold leading-tight">Ethara Seat &amp; Project Mapping</h1>
+        <p class="text-xs text-[var(--slate)] font-mono">FLOOR PLAN CONTROL SYSTEM · <span id="api-status">checking API…</span></p>
+      </div>
+    </div>
+    <div class="text-right hidden sm:block">
+      <p class="text-xs text-[var(--slate)] font-mono">~5,000 EMPLOYEES · 5 FLOORS · 10 ZONES</p>
+    </div>
+  </header>
+
+  <!-- Nav -->
+  <nav class="flex gap-2 mb-6 flex-wrap">
+    <div class="nav-btn active" data-view="dashboard">Dashboard</div>
+    <div class="nav-btn" data-view="directory">Employee Directory</div>
+    <div class="nav-btn" data-view="seats">Seat Map</div>
+    <div class="nav-btn" data-view="newjoiner">New Joiner Allocation</div>
+    <div class="nav-btn" data-view="assistant">AI Assistant</div>
+  </nav>
+
+  <!-- DASHBOARD VIEW -->
+  <section id="view-dashboard">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+      <div class="card stat-card p-4">
+        <p class="tag" style="background:rgba(30,58,95,0.08); color:var(--ink)">Total Employees</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-employees">—</p>
+      </div>
+      <div class="card stat-card p-4">
+        <p class="tag" style="background:rgba(30,58,95,0.08); color:var(--ink)">Total Seats</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-seats">—</p>
+      </div>
+      <div class="card stat-card p-4">
+        <p class="tag tag-occupied">Occupied</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-occupied">—</p>
+      </div>
+      <div class="card stat-card p-4">
+        <p class="tag tag-available">Available</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-available">—</p>
+      </div>
+      <div class="card stat-card p-4">
+        <p class="tag tag-reserved">Reserved</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-reserved">—</p>
+      </div>
+      <div class="card stat-card p-4">
+        <p class="tag tag-maintenance">Maintenance</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-maintenance">—</p>
+      </div>
+      <div class="card stat-card p-4 col-span-2">
+        <p class="tag" style="background:rgba(217,142,43,0.14); color:var(--amber)">New Joiners Pending Allocation</p>
+        <p class="font-display text-3xl font-bold mt-2" id="stat-pending">—</p>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="card p-4">
+        <h3 class="font-display font-semibold mb-3">Project-wise Seat Allocation</h3>
+        <div id="project-util" class="space-y-2 max-h-80 overflow-y-auto"></div>
+      </div>
+      <div class="card p-4">
+        <h3 class="font-display font-semibold mb-3">Floor-wise Occupancy</h3>
+        <div id="floor-util" class="space-y-3 max-h-80 overflow-y-auto"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DIRECTORY VIEW -->
+  <section id="view-directory" class="hidden">
+    <div class="card p-4 mb-4">
+      <div class="grid sm:grid-cols-4 gap-2">
+        <input id="dir-name" placeholder="Search name…" />
+        <input id="dir-email" placeholder="Search email…" />
+        <input id="dir-code" placeholder="Employee code…" />
+        <select id="dir-status">
+          <option value="">All statuses</option>
+          <option>Active</option>
+          <option>Pending Allocation</option>
+          <option>Inactive</option>
+        </select>
+      </div>
+      <button id="dir-search-btn" class="nav-btn active mt-3 inline-block">Search</button>
+    </div>
+    <div class="card overflow-x-auto">
+      <table id="dir-table">
+        <thead>
+          <tr>
+            <th>Code</th><th>Name</th><th>Email</th><th>Dept</th><th>Role</th>
+            <th>Project</th><th>Status</th><th>Seat</th>
+          </tr>
+        </thead>
+        <tbody id="dir-tbody"></tbody>
+      </table>
+    </div>
+    <p class="text-xs text-[var(--slate)] font-mono mt-2">Showing first 50 matches. Refine your search to narrow results.</p>
+  </section>
+
+  <!-- SEATS VIEW -->
+  <section id="view-seats" class="hidden">
+    <div class="card p-4 mb-4">
+      <div class="grid sm:grid-cols-4 gap-2">
+        <select id="seat-floor"><option value="">All floors</option></select>
+        <select id="seat-zone"><option value="">All zones</option></select>
+        <select id="seat-status">
+          <option value="">All statuses</option>
+          <option>Available</option>
+          <option>Occupied</option>
+          <option>Reserved</option>
+          <option>Maintenance</option>
+        </select>
+        <button id="seat-search-btn" class="nav-btn active">Filter</button>
+      </div>
+    </div>
+    <div class="card overflow-x-auto">
+      <table>
+        <thead><tr><th>Floor</th><th>Zone</th><th>Bay</th><th>Seat #</th><th>Status</th></tr></thead>
+        <tbody id="seat-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- NEW JOINER VIEW -->
+  <section id="view-newjoiner" class="hidden">
+    <div class="card p-6 max-w-2xl">
+      <h3 class="font-display font-semibold text-lg mb-4">Add New Employee &amp; Allocate Seat</h3>
+      <div class="grid sm:grid-cols-2 gap-3">
+        <input id="nj-code" placeholder="Employee code (e.g. ETH05001)" />
+        <input id="nj-name" placeholder="Full name" />
+        <input id="nj-email" placeholder="Email" />
+        <input id="nj-dept" placeholder="Department" />
+        <input id="nj-role" placeholder="Role" />
+        <input id="nj-joining" type="date" />
+        <select id="nj-project"><option value="">Select project…</option></select>
+        <select id="nj-zone"><option value="">Preferred zone (optional)</option></select>
+      </div>
+      <button id="nj-submit" class="nav-btn active mt-4 inline-block">Create &amp; Auto-Allocate Seat</button>
+      <div id="nj-result" class="mt-4 text-sm"></div>
+    </div>
+  </section>
+
+  <!-- AI ASSISTANT VIEW -->
+  <section id="view-assistant" class="hidden">
+    <div class="blueprint-panel p-5 max-w-3xl">
+      <h3 class="font-display font-semibold mb-1">Ask about seats, projects, or people</h3>
+      <p class="text-xs font-mono opacity-70 mb-4">Try: "Where is employee &lt;name&gt; seated?" · "Show available seats on Floor 3" · "How many seats are occupied for Project Indigo?"</p>
+      <div id="chat-log" class="space-y-3 mb-4 max-h-96 overflow-y-auto"></div>
+      <div class="flex gap-2">
+        <input id="chat-input" placeholder="Type your question…" class="flex-1 text-[var(--ink)]" />
+        <button id="chat-send" class="nav-btn active">Ask</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+const API_BASE = window.ETHARA_API_BASE || "http://localhost:8000";
+
+// ---------- Navigation ----------
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('[id^="view-"]').forEach(v => v.classList.add('hidden'));
+    document.getElementById('view-' + btn.dataset.view).classList.remove('hidden');
+  });
+});
+
+async function apiGet(path){
+  const res = await fetch(API_BASE + path);
+  if(!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+async function apiPost(path, body){
+  const res = await fetch(API_BASE + path, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+function tagClass(status){
+  return {
+    'Available':'tag-available','Occupied':'tag-occupied',
+    'Reserved':'tag-reserved','Maintenance':'tag-maintenance'
+  }[status] || '';
+}
+
+// ---------- Dashboard ----------
+async function loadDashboard(){
+  try{
+    const s = await apiGet('/dashboard/summary');
+    document.getElementById('api-status').textContent = 'API connected';
+    document.getElementById('stat-employees').textContent = s.total_employees.toLocaleString();
+    document.getElementById('stat-seats').textContent = s.total_seats.toLocaleString();
+    document.getElementById('stat-occupied').textContent = s.occupied_seats.toLocaleString();
+    document.getElementById('stat-available').textContent = s.available_seats.toLocaleString();
+    document.getElementById('stat-reserved').textContent = s.reserved_seats.toLocaleString();
+    document.getElementById('stat-maintenance').textContent = s.maintenance_seats.toLocaleString();
+    document.getElementById('stat-pending').textContent = s.new_joiners_pending_allocation.toLocaleString();
+
+    const proj = await apiGet('/dashboard/project-utilization');
+    const projMax = Math.max(...proj.map(p=>p.occupied_seats), 1);
+    document.getElementById('project-util').innerHTML = proj.map(p => `
+      <div>
+        <div class="flex justify-between text-xs font-mono mb-1"><span>${p.project}</span><span>${p.occupied_seats}</span></div>
+        <div class="h-2 bg-[var(--blueprint-line)] rounded overflow-hidden"><div class="h-full bg-[var(--ink)]" style="width:${(p.occupied_seats/projMax*100)}%"></div></div>
+      </div>`).join('');
+
+    const floors = await apiGet('/dashboard/floor-utilization');
+    document.getElementById('floor-util').innerHTML = floors.map(f => `
+      <div class="flex items-center justify-between text-sm">
+        <span class="font-mono">Floor ${f.floor}</span>
+        <div class="flex gap-2">
+          <span class="tag tag-occupied">${f.Occupied||0} occ</span>
+          <span class="tag tag-available">${f.Available||0} avail</span>
+          <span class="tag tag-reserved">${f.Reserved||0} res</span>
+        </div>
+      </div>`).join('');
+  }catch(e){
+    document.getElementById('api-status').textContent = 'API unreachable — is the backend running?';
+    console.error(e);
+  }
+}
+
+// ---------- Directory ----------
+async function searchDirectory(){
+  const params = new URLSearchParams();
+  const name = document.getElementById('dir-name').value;
+  const email = document.getElementById('dir-email').value;
+  const code = document.getElementById('dir-code').value;
+  const status = document.getElementById('dir-status').value;
+  if(name) params.set('name', name);
+  if(email) params.set('email', email);
+  if(code) params.set('employee_code', code);
+  if(status) params.set('status', status);
+  params.set('limit', 50);
+  const rows = await apiGet('/employees?' + params.toString());
+  const projects = await getProjectsMap();
+  document.getElementById('dir-tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td class="font-mono">${r.employee_code}</td>
+      <td>${r.name}</td>
+      <td class="font-mono text-xs">${r.email}</td>
+      <td>${r.department||''}</td>
+      <td>${r.role||''}</td>
+      <td>${projects[r.project_id]||'—'}</td>
+      <td>${r.status}</td>
+      <td><span class="tag ${r.seat_allocation_status==='Allocated'?'tag-available':'tag-reserved'}">${r.seat_allocation_status}</span></td>
+    </tr>`).join('');
+}
+let _projectsCache = null;
+async function getProjectsMap(){
+  if(_projectsCache) return _projectsCache;
+  const projects = await apiGet('/projects');
+  _projectsCache = {};
+  projects.forEach(p => _projectsCache[p.id] = p.name);
+  return _projectsCache;
+}
+
+// ---------- Seats ----------
+async function populateSeatFilters(){
+  const floors = [1,2,3,4,5];
+  const zones = ['A','B','C','D','E','F','G','H','I','J'];
+  document.getElementById('seat-floor').innerHTML += floors.map(f=>`<option>${f}</option>`).join('');
+  document.getElementById('seat-zone').innerHTML += zones.map(z=>`<option>${z}</option>`).join('');
+  document.getElementById('nj-zone').innerHTML += zones.map(z=>`<option>${z}</option>`).join('');
+}
+async function searchSeats(){
+  const params = new URLSearchParams();
+  const floor = document.getElementById('seat-floor').value;
+  const zone = document.getElementById('seat-zone').value;
+  const status = document.getElementById('seat-status').value;
+  if(floor) params.set('floor', floor);
+  if(zone) params.set('zone', zone);
+  if(status) params.set('status', status);
+  params.set('limit', 50);
+  const rows = await apiGet('/seats?' + params.toString());
+  document.getElementById('seat-tbody').innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.floor}</td><td>${r.zone}</td><td>${r.bay}</td>
+      <td class="font-mono">${r.seat_number}</td>
+      <td><span class="tag ${tagClass(r.status)}">${r.status}</span></td>
+    </tr>`).join('');
+}
+
+// ---------- New Joiner ----------
+async function populateProjectSelect(){
+  const projects = await apiGet('/projects');
+  document.getElementById('nj-project').innerHTML += projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+}
+async function submitNewJoiner(){
+  const resultEl = document.getElementById('nj-result');
+  resultEl.innerHTML = '<div class="loader"></div>';
+  try{
+    const emp = await apiPost('/employees', {
+      employee_code: document.getElementById('nj-code').value,
+      name: document.getElementById('nj-name').value,
+      email: document.getElementById('nj-email').value,
+      department: document.getElementById('nj-dept').value,
+      role: document.getElementById('nj-role').value,
+      joining_date: document.getElementById('nj-joining').value,
+      project_id: parseInt(document.getElementById('nj-project').value) || null,
+      status: "Pending Allocation"
+    });
+    const zone = document.getElementById('nj-zone').value;
+    const alloc = await apiPost('/seats/allocate', {
+      employee_id: emp.id,
+      project_id: emp.project_id,
+      preferred_zone: zone || null
+    });
+    resultEl.innerHTML = `<div class="p-3 rounded" style="background:rgba(62,143,92,0.1)">
+      <p class="font-semibold text-[var(--green)]">✓ ${emp.name} created and seated.</p>
+      <p class="font-mono text-xs mt-1">Floor ${alloc.seat.floor}, Zone ${alloc.seat.zone}, Bay ${alloc.seat.bay}, Seat ${alloc.seat.seat_number}</p>
+      <p class="text-xs mt-1 text-[var(--slate)]">${alloc.note}</p>
+    </div>`;
+    loadDashboard();
+  }catch(e){
+    resultEl.innerHTML = `<div class="p-3 rounded" style="background:rgba(181,83,60,0.1)"><p class="text-[var(--rose)]">✗ ${e.message}</p></div>`;
+  }
+}
+
+// ---------- AI Assistant ----------
+function appendChat(role, text){
+  const log = document.getElementById('chat-log');
+  const bubble = document.createElement('div');
+  bubble.className = 'p-3 rounded max-w-[85%] text-sm ' + (role==='user' ? 'chat-bubble-user ml-auto' : 'chat-bubble-ai');
+  bubble.textContent = text;
+  log.appendChild(bubble);
+  log.scrollTop = log.scrollHeight;
+}
+async function sendChat(){
+  const input = document.getElementById('chat-input');
+  const q = input.value.trim();
+  if(!q) return;
+  appendChat('user', q);
+  input.value = '';
+  try{
+    const res = await apiPost('/ai/query', {query: q});
+    appendChat('ai', res.answer);
+  }catch(e){
+    appendChat('ai', 'Error: ' + e.message);
+  }
+}
+
+// ---------- Wire up events ----------
+document.getElementById('dir-search-btn').addEventListener('click', searchDirectory);
+document.getElementById('seat-search-btn').addEventListener('click', searchSeats);
+document.getElementById('nj-submit').addEventListener('click', submitNewJoiner);
+document.getElementById('chat-send').addEventListener('click', sendChat);
+document.getElementById('chat-input').addEventListener('keydown', e => { if(e.key==='Enter') sendChat(); });
+
+// ---------- Init ----------
+loadDashboard();
+searchDirectory();
+populateSeatFilters();
+searchSeats();
+populateProjectSelect();
+appendChat('ai', 'Hi! Ask me things like "Where is employee <name> seated?" or "How many seats are occupied for Project Indigo?"');
+</script>
+</body>
+</html>
