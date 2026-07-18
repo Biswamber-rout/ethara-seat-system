@@ -7,9 +7,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./ethara.db")
-   if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
-       DATABASE_URL = DATABASE_URL.split("://", 1)[1]
-       DATABASE_URL = "postgresql+pg8000://" + DATABASE_URL
+
+if DATABASE_URL.startswith("postgres://") or DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.split("://", 1)[1]
+    DATABASE_URL = "postgresql+pg8000://" + DATABASE_URL
 
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
