@@ -170,6 +170,27 @@ final submission, and is flagged as a follow-up in `DEPLOYMENT.md`.
 
 ---
 
+## Prompt 11 — Deployment Debugging (Postgres Migration)
+
+After initial deployment to Railway, discovered the SQLite database was being wiped 
+on every redeploy since Railway's filesystem is ephemeral. Migrated to Railway's 
+managed PostgreSQL for persistence.
+
+First attempt crashed with `ImportError: libpq.so.5: cannot open shared object file` — 
+`psycopg2-binary`'s compiled binary wasn't compatible with Railway's build image. 
+Fixed by switching to `pg8000`, a pure-Python Postgres driver requiring no system 
+library, and updating `database.py` to rewrite the `DATABASE_URL` connection string 
+accordingly.
+
+Also found a text-contrast bug in the AI Assistant chat UI (white bubble background 
+inheriting light text color from a parent dark panel, making answers unreadable) — 
+fixed with an explicit `color` override on `.chat-bubble-ai`.
+
+**How verified:** Re-ran `seed_data.py` against the live Postgres instance via 
+Railway's console, confirmed `/dashboard/summary` returned correct data, then 
+triggered a redeploy and re-checked the same endpoint to confirm data persisted 
+(unlike the earlier SQLite setup).
+
 ## Summary: what I validated manually, end to end
 
 - Started the real FastAPI server and hit every endpoint category with `curl`, reading
