@@ -1,6 +1,7 @@
 # AI_PROMPTS.md
 
 **AI tool used:** Claude (Anthropic), via the Claude.ai chat interface with code execution.
+**Candidate name:** [Biswamber Rout]
 **Candidate role:** Directed the architecture and requirements, reviewed and tested every
 generated file, fixed data/logic bugs found during testing, and made all final
 deployment decisions.
